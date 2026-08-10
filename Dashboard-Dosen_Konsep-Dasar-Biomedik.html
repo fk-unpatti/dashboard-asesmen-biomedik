@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Dosen — Konsep Dasar Biomedik | Matrikulasi FK Unpatti 2026</title>
+<style>
+  :root{
+    --navy:#0000CC; --deep:#001845; --sky:#1F8FCB; --teal:#0C7C82;
+    --gold:#C9861A; --red:#9C2F24; --bg:#F5F8FC; --card:#FFFFFF; --line:#DCE4F0;
+    --gray:#5B6B82; --graylight:#8A96A8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:-apple-system,"Segoe UI",Calibri,Roboto,Arial,sans-serif; background:var(--bg); color:var(--deep);}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 20px 60px;}
+  header{background:linear-gradient(135deg,var(--navy),#0A0FD6); color:#fff; padding:28px 0;}
+  header .wrap{display:flex; flex-direction:column; gap:6px;}
+  header .kicker{font-size:.78rem; font-weight:700; letter-spacing:1.5px; color:var(--gold); text-transform:uppercase;}
+  header h1{margin:0; font-size:1.7rem;}
+  header .sub{color:#C9D6F5; font-size:.95rem;}
+
+  .gate{max-width:420px; margin:80px auto; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:28px; text-align:center;}
+  .gate input{width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; margin:14px 0; font-size:1rem;}
+  .gate button{background:var(--navy); color:#fff; border:none; padding:10px 22px; border-radius:20px; font-weight:700; cursor:pointer;}
+  .gate .err{color:var(--red); font-size:.85rem; min-height:1.2em;}
+
+  #dashboard{display:none;}
+  .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:20px 0; padding:14px 18px; background:var(--card); border:1px solid var(--line); border-radius:12px;}
+  .toolbar label{font-size:.82rem; font-weight:700; color:var(--navy); margin-right:4px;}
+  .toolbar select, .toolbar button{padding:7px 12px; border-radius:8px; border:1px solid var(--line); font-size:.88rem;}
+  .toolbar button.refresh{background:var(--navy); color:#fff; border:none; font-weight:700; cursor:pointer;}
+  .toolbar .updated{margin-left:auto; font-size:.78rem; color:var(--graylight);}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin:18px 0;}
+  @media (max-width:900px){ .kpi-grid{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:560px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} }
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 14px; text-align:center;}
+  .kpi .val{font-size:1.5rem; font-weight:700; color:var(--navy);}
+  .kpi .lbl{font-size:.72rem; color:var(--gray); margin-top:2px;}
+
+  .panel{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin-bottom:18px;}
+  .panel h2{margin:0 0 4px; font-size:1.1rem; color:var(--deep);}
+  .panel .desc{font-size:.82rem; color:var(--graylight); margin-bottom:14px;}
+
+  .bar-row{display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:.85rem;}
+  .bar-row .bar-label{flex:0 0 160px; color:var(--deep);}
+  .bar-track{flex:1; background:var(--bg); border-radius:6px; height:18px; overflow:hidden; position:relative;}
+  .bar-fill{height:100%; border-radius:6px;}
+  .bar-fill.pre{background:var(--sky);}
+  .bar-fill.post{background:var(--navy);}
+  .bar-val{flex:0 0 46px; text-align:right; font-weight:700; color:var(--deep);}
+
+  table{width:100%; border-collapse:collapse; font-size:.85rem;}
+  th, td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--line);}
+  th{background:var(--navy); color:#fff; font-size:.78rem; text-transform:uppercase;}
+  tr:nth-child(even){background:var(--bg);}
+  .flag-badge{background:#FDF0DC; color:#8A5A0A; font-size:.72rem; padding:2px 8px; border-radius:10px;}
+  .table-scroll{overflow-x:auto;}
+
+  .empty-note{color:var(--graylight); font-size:.85rem; padding:20px; text-align:center;}
+  #err-box{display:none; background:#FCEAE8; border:1px solid #E8A79E; color:#7A2A1F; padding:12px 16px; border-radius:10px; margin:16px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">Matrikulasi Mahasiswa Baru 2026 &middot; Fakultas Kedokteran Universitas Pattimura</div>
+    <h1>Dashboard Dosen &mdash; Konsep Dasar Biomedik</h1>
+    <div class="sub">Tampilan ini terpisah dari handout mahasiswa. Tidak menampilkan nama peserta atau ranking individu.</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="gate" id="gate">
+    <h2 style="margin-top:0;">Masuk Dashboard</h2>
+    <p style="font-size:.88rem; color:var(--gray);">Masukkan URL Apps Script Web App dan passcode dashboard (jika dikonfigurasi oleh admin).</p>
+    <input type="text" id="in-url" placeholder="Apps Script Web App URL">
+    <input type="password" id="in-passcode" placeholder="Passcode dashboard (opsional)">
+    <div class="err" id="gate-err"></div>
+    <button onclick="loadDashboard()">Buka Dashboard</button>
+  </div>
+
+  <div id="err-box"></div>
+
+  <div id="dashboard">
+    <div class="toolbar">
+      <label for="filter-program">Program Studi</label>
+      <select id="filter-program" onchange="loadDashboard()">
+        <option value="Semua">Semua</option>
+        <option value="Sarjana Kedokteran">Sarjana Kedokteran</option>
+        <option value="Sarjana Kedokteran Gigi">Sarjana Kedokteran Gigi</option>
+      </select>
+      <button class="refresh" onclick="loadDashboard()">&#8635; Refresh</button>
+      <span class="updated" id="updated-at"></span>
+    </div>
+
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <div class="panel">
+      <h2>Pre-Test vs Post-Test per Learning Objective</h2>
+      <div class="desc">LO &times; Pre-Test % &times; Post-Test %</div>
+      <div id="lo-chart"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Perbandingan Program Studi</h2>
+      <div class="table-scroll">
+        <table id="program-table"><thead><tr><th>Program</th><th>N</th><th>Mean Pre</th><th>Mean Post</th><th>Mean Gain</th><th>Mastery Rate</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Analisis Butir Soal <span style="font-weight:400; font-size:.8rem; color:var(--graylight);">(Item Analysis)</span></h2>
+      <div class="desc">Difficulty index &amp; distribusi distractor per soal. Flag "Review item" adalah penanda untuk ditinjau fasilitator, bukan vonis soal buruk.</div>
+      <div class="table-scroll">
+        <table id="item-table">
+          <thead><tr><th>ID Soal</th><th>Tes</th><th>Domain</th><th>LO</th><th>N</th><th>Difficulty</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>Catatan</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let DASH_URL = "";
+  let DASH_PASSCODE = "";
+
+  function loadDashboard() {
+    const urlInput = document.getElementById("in-url").value.trim();
+    const pass = document.getElementById("in-passcode").value.trim();
+    if (urlInput) DASH_URL = urlInput;
+    if (pass) DASH_PASSCODE = pass;
+    if (!DASH_URL) { document.getElementById("gate-err").textContent = "URL Apps Script Web App wajib diisi."; return; }
+
+    const program = document.getElementById("filter-program") ? document.getElementById("filter-program").value : "Semua";
+    const qs = "action=dashboard&program=" + encodeURIComponent(program) + (DASH_PASSCODE ? "&passcode=" + encodeURIComponent(DASH_PASSCODE) : "");
+
+    document.getElementById("err-box").style.display = "none";
+    fetch(DASH_URL + "?" + qs)
+      .then(r => r.json())
+      .then(resp => {
+        if (!resp.ok) throw new Error(resp.error || "Gagal memuat data.");
+        document.getElementById("gate").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        renderDashboard(resp.data);
+      })
+      .catch(err => {
+        const box = document.getElementById("err-box");
+        box.style.display = "block";
+        box.textContent = "Gagal memuat dashboard: " + err.message;
+        document.getElementById("gate-err").textContent = err.message;
+      });
+  }
+
+  function renderDashboard(d) {
+    document.getElementById("updated-at").textContent = "Diperbarui: " + new Date(d.generated_at).toLocaleString("id-ID");
+
+    const kpis = [
+      [d.n_participants, "Jumlah Peserta (N)"],
+      [fmtPct(d.pre_mean), "Rata-rata Pre-Test"],
+      [fmtPct(d.post_mean), "Rata-rata Post-Test"],
+      [(d.gain_mean >= 0 ? "+" : "") + d.gain_mean + " poin", "Learning Gain"],
+      [d.normalized_gain_mean == null ? "N/A" : d.normalized_gain_mean, "Normalized Gain"],
+      [fmtPct(d.mastery_rate), "Mastery Rate"],
+    ];
+    document.getElementById("kpi-grid").innerHTML = kpis.map(k =>
+      '<div class="kpi"><div class="val">' + k[0] + '</div><div class="lbl">' + k[1] + '</div></div>'
+    ).join("");
+
+    // LO bar chart (pure CSS bars, no external chart library)
+    const loRows = d.lo_analysis || [];
+    document.getElementById("lo-chart").innerHTML = loRows.length ? loRows.map(lo => {
+      const pre = lo.pre_mean === "" ? 0 : Number(lo.pre_mean);
+      const post = lo.post_mean === "" ? 0 : Number(lo.post_mean);
+      return '<div class="bar-row"><div class="bar-label">' + lo.LO + ' — ' + (lo.domain || "") + '</div>' +
+        '<div class="bar-track"><div class="bar-fill pre" style="width:' + pre + '%"></div></div><div class="bar-val">' + (lo.pre_mean === "" ? "-" : pre + "%") + '</div></div>' +
+        '<div class="bar-row"><div class="bar-label"></div>' +
+        '<div class="bar-track"><div class="bar-fill post" style="width:' + post + '%"></div></div><div class="bar-val">' + (lo.post_mean === "" ? "-" : post + "%") + '</div></div>';
+    }).join("") : '<div class="empty-note">Belum ada data.</div>';
+
+    // program comparison table
+    const progRows = d.program_comparison || [];
+    document.querySelector("#program-table tbody").innerHTML = progRows.length ? progRows.map(p =>
+      '<tr><td>' + p.program + '</td><td>' + p.n + '</td><td>' + fmtPct(p.mean_pre) + '</td><td>' + fmtPct(p.mean_post) + '</td><td>' + (p.mean_gain == null ? '-' : (p.mean_gain >= 0 ? '+' : '') + p.mean_gain) + '</td><td>' + fmtPct(p.mastery_rate) + '</td></tr>'
+    ).join("") : '<tr><td colspan="6" class="empty-note">Belum ada data.</td></tr>';
+
+    // item analysis table
+    const itemRows = d.item_analysis || [];
+    document.querySelector("#item-table tbody").innerHTML = itemRows.length ? itemRows.map(it =>
+      '<tr><td>' + it.question_id + '</td><td>' + it.assessment + '</td><td>' + it.domain + '</td><td>' + it.LO + '</td><td>' + it.n + '</td>' +
+      '<td>' + it.difficulty_label + ' (' + it.difficulty_index + ')</td>' +
+      '<td>' + it.A + '</td><td>' + it.B + '</td><td>' + it.C + '</td><td>' + it.D + '</td><td>' + it.E + '</td>' +
+      '<td>' + (it.flag ? '<span class="flag-badge">' + it.flag + '</span>' : '') + '</td></tr>'
+    ).join("") : '<tr><td colspan="12" class="empty-note">Belum ada data.</td></tr>';
+  }
+
+  function fmtPct(v) { return (v == null || v === "") ? "-" : v + "%"; }
+</script>
+
+</body>
+</html>
